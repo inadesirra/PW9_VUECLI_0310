@@ -1,7 +1,7 @@
 <template>
     <v-main class="list">
         <h3 class="text-h3 font-weight-medium mb-5">To Do List</h3>
-        <v-card>
+        <v-card align="left">
             <v-card-title>
                 <v-text-field
                     v-model="search"
@@ -13,12 +13,26 @@
                 <v-spacer></v-spacer>
                 <v-btn color="success" dark @click="dialog = true"> Tambah </v-btn>
             </v-card-title>
-            <v-data-table :headers="headers" :items="todos" :search="search">
-                <template v-slot:[`item.actions`]="{ item }">
-                    <v-btn small class="mr-2" @click="editItem(item)"> edit </v-btn>
-                    <v-btn small @click="deleteItem(item)"> delete </v-btn>
+            <v-data-table :headers="headers" :items="todos" :search="search" item-key="note" show-expand>
+                <template v-slot:[`item.actions`]="{ item }"> 
+                    <v-icon 
+                    small class="mr-2" color="green" @click="editItem(item)"> mdi-pencil </v-icon>
+                    <v-icon small color="red" @click="deleteItem(item)"> mdi-delete </v-icon>
                 </template>
-            </v-data-table>
+
+
+                <template v-slot:[`item.priority`]="{ item }">
+                    <v-chip v-show="item.priority == 'Penting'" color="red"  outlined>{{ item.priority }}</v-chip>
+                    <v-chip v-show="item.priority == 'Biasa'" color="green"  outlined>{{ item.priority }}</v-chip>
+                    <v-chip v-show="item.priority == 'Tidak Penting'" color="blue"  outlined>{{ item.priority }}</v-chip>
+                </template>
+
+                <template v-slot:expanded-item="{ headers, item }">
+                    <td :colspan="headers.length">
+                        Note: {{ item.note }}
+                    </td> 
+                </template>
+            </v-data-table> 
         </v-card>
         <v-dialog v-model="dialog" persistent max-width="600px">
             <v-card>
@@ -37,8 +51,8 @@
                             v-model="formTodo.priority"
                             :items="['Penting','Biasa','Tidak Penting']"
                             label="Priority"
-                            required
-                        ></v-select>
+                            required>
+                        </v-select>
 
                         <v-textarea
                             v-model="formTodo.note"
@@ -55,13 +69,14 @@
             </v-card>
         </v-dialog>
     </v-main>
-</template>
+</template> 
 
 <script>
 export default {
     name: "List",
     data() {
         return {
+            expanded:[],
             search: null,
             dialog: false,
             headers: [
@@ -72,8 +87,8 @@ export default {
                     value: "task",
                 },
                 { text: "Priority", value: "priority" },
-                { text: "Note", value: "note" },
                 { text: "Actions", value: "actions" },
+                { text: "Note", value: "note", align: " d-none" },
             ],
             todos: [
                 {
@@ -93,22 +108,64 @@ export default {
                 }
             ],
             formTodo: { task: null, priority: null, note: null },
+            todo: [],
+            editedIndex: -1,
+            editedItem: {
+                name: '',
+                priority: '',
+                note: '',
+            },
+            defaultItem: {
+                name: '',
+                priority: '',
+                note: '',
+            },
         };
     },
 
+    computed: {
+      formTitle () {
+        return this.editedIndex === -1 ? 'Tambah' : 'Edit'
+      },
+    },
+
     methods: {
+        editItem (item) {
+            this.editedIndex = this.todos.indexOf(item)
+            this.formTodo = Object.assign({}, item)
+            this.dialog = true
+        },
+
+        deleteItem (item) {
+            const index = this.todos.indexOf(item)
+            confirm('Yakin ingin menghapus item? [Y/N]') && this.todos.splice(index, 1)
+        },
+
         save() {
-            this.todos.push(this.formTodo);
-            this.resetForm();
-            this.dialog = false;
+            if (this.editedIndex > -1) {
+            Object.assign(this.todos[this.editedIndex], this.formTodo)
+            } else {
+                this.todos.push(this.formTodo);
+                this.resetForm();
+                this.dialog = false;
+            }
+            this.cancel()
+            
         },
+
         cancel() {
-            this.resetForm();
-            this.dialog = false;
+            this.dialog = false
+            setTimeout(() => {
+                this.resetForm()
+                this.editedIndex = -1
+            }, 300)
+            // this.resetForm();
+            // this.dialog = false;
         },
+
         resetForm() {
             this.formTodo = { task: null, priority: null, note: null };
         },
     },
 };
-</script>
+</script> 
